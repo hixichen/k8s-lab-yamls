@@ -1,0 +1,54 @@
+---
+# Secrets      
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db
+type: Opaque
+data:
+  user: dXNlcg==
+  pwd: cHdkMTIz
+---
+# Deployment
+apiVersion: extensions/v1beta1
+kind:       Deployment
+metadata:
+  name: db
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+      - name:  db
+        image: postgres:9.6.2-alpine
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: db
+              key:  user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db
+              key:  pwd
+        ports:
+        - name:          client
+          containerPort: 5432
+---
+# Service
+kind: Service
+apiVersion: v1
+metadata:
+  name: db
+spec:
+  selector:
+    app: db
+  type:  NodePort
+  ports:
+    - name:       client
+      port:       5432
+      nodePort:   30522

@@ -1,0 +1,67 @@
+---
+# Secrets      
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api
+type: Opaque
+data:
+  user: dXNlcg==
+  pwd: cHdkMTIz
+---
+# Deployment
+apiVersion: extensions/v1beta1
+kind:       Deployment
+metadata:
+  name: api
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name:  api
+        image: quay.io/imhotepio/iconoflix:db
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PG_USER
+          valueFrom:
+            secretKeyRef:
+              name: api
+              key:  user
+        - name: PG_PWD
+          valueFrom:
+            secretKeyRef:
+              name: api
+              key:  pwd
+        - name: PG_SERVICE_HOST # Iconoflix API Host
+          value: db
+        - name: PG_SERVICE_PORT # Iconoflix API Port
+          value: "5432"
+        resources:
+          requests:
+            memory: 256Mi
+            cpu:    250m
+          limits:
+            memory: 512Mi
+            cpu:    500m
+        ports:
+        - name: api
+          containerPort: 4000
+---
+# Service
+kind: Service
+apiVersion: v1
+metadata:
+  name: api
+spec:
+  type:  NodePort
+  selector:
+    app: api
+  ports:
+    - name:       api
+      port:       4000
+      targetPort: api
+      nodePort:   30600

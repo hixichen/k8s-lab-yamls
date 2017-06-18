@@ -1,0 +1,102 @@
+---
+# Secrets      
+apiVersion: v1
+kind: Secret
+metadata:
+  name: secrets
+type: Opaque
+data:
+  user: dXNlcg==
+  pwd: cHdkMTIz
+---
+# PV
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv
+  labels:
+     store: db_disk
+     type: ssd
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /tmp/xyz
+---
+# PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  selector:
+    matchLabels:
+      store: db_disk
+    matchExpressions:
+    - {key: type, operator: In, values: [ssd]}
+---
+# Deployment
+apiVersion: extensions/v1beta1
+kind:       Deployment
+metadata:
+  name: sql
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: sql
+    spec:
+      containers:
+      - name:  postgressql
+        image: postgres:9.6.2-alpine
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: secrets # => References the secret name
+              key:  user    # => References a key from the secret
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: secrets
+              key:  pwd
+        ports:
+        - name:          pod-api
+          containerPort: 5432
+        resources:
+          requests:
+            memory: 128Mi
+            cpu:    300m
+          limits:
+            memory: 256Mi
+            cpu:    500m
+        volumeMounts:
+          - mountPath: /var/lib/postgresql/data
+            name: pvc-v
+      volumes:
+        - name: pvc-v
+          persistentVolumeClaim:
+            claimName: pvc
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: sql
+spec:
+  selector:
+    app: sql
+  type:  NodePort
+  ports:
+    - name:       client
+      port:       5432
+      targetPort: pod-api
+      nodePort:   30518

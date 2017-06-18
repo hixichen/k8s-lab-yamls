@@ -1,0 +1,32 @@
+# Pod
+apiVersion: v1
+kind:       Pod
+metadata:
+  name: pod-iconoflix
+  labels:
+    app: pod-iconoflix
+spec:
+  containers:
+  - name:  iconoflix
+    image: quay.io/imhotepio/iconoflix:mem
+    ports:
+    - name: pod-api
+      containerPort: 4000
+
+---
+# Service
+kind: Service
+apiVersion: v1
+metadata:
+  name: svc-iconoflix
+  labels:
+    app: svc-iconoflix
+spec:
+  type:  NodePort
+  selector:
+    app: pod-iconoflix
+  ports:
+    - name:       svc-api
+      port:       4000
+      targetPort: pod-api
+      nodePort:   30510

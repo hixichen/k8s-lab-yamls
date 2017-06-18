@@ -1,0 +1,54 @@
+---
+# Deployment
+apiVersion: extensions/v1beta1
+kind:       Deployment
+metadata:
+  name: probe
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: probe
+    spec:
+      containers:
+      - name:            probe
+        image:           quay.io/imhotepio/iconoflix:mem
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: api
+          containerPort: 4000
+        resources:
+          requests:
+            cpu:    500m
+            memory: 128Mi
+          limits:
+            cpu:    500m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /check/alive
+            port: api
+          initialDelaySeconds: 2
+          periodSeconds:       5
+        readinessProbe:
+          httpGet:
+            path: /check/health
+            port: api
+          initialDelaySeconds: 20
+          periodSeconds:       2
+---
+# Service
+kind:       Service
+apiVersion: v1
+metadata:
+  name: probe
+spec:
+  type:  NodePort
+  selector:
+    app: probe
+  ports:
+    - name:       api
+      port:       4000
+      nodePort:   30400
+      targetPort: api
